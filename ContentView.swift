@@ -2,28 +2,31 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject var weatherVM = WeatherViewModel()
-    @StateObject var favoritesVM = FavoritesView() //змінити назву змінної в іншомув коді
+    @StateObject var favoritesVM = FavoritesViewModel()
     
-    // Стан для програмного керування активною вкладкою
+    // Стан для програмного керування активною вкладкою 
     @State private var selectedTab = 0
     
     var body: some View {
         ZStack {
-            // Простий нейтральний фон
-            Color(.systemBackground)
-                .ignoresSafeArea()
-            
-            // TabView для навігації
+            //фон градієнт ПЕРЕВІРИТИ
+            LinearGradient(
+                gradient: Gradient(colors: [Color.blue.opacity(0.3), Color.white]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+    
             TabView(selection: $selectedTab) {
                 
-                // Вкладка "Погода"
+                //Погода
                 WeatherDetailView(viewModel: weatherVM, favoritesVM: favoritesVM)
                     .tabItem {
                         Label("Погода", systemImage: "cloud.sun.fill")
                     }
                     .tag(0)
                 
-                // Вкладка "Улюблені"
+                // Улюблені
                 FavoritesView(
                     favoritesVM: favoritesVM,
                     weatherVM: weatherVM,
@@ -41,3 +44,4 @@ struct ContentView: View {
         }
     }
 }
+
