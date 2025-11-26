@@ -1,58 +1,43 @@
-
-
-
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var weatherVM = WeatherViewModel()
-    @StateObject private var favoritesVM = FavoritesViewModel()
-    @State private var selectedTab: Tab = .weather
-
-    enum Tab: Int { case weather, favorites }
-
+    @StateObject var weatherVM = WeatherViewModel()
+    @StateObject var favoritesVM = FavoritesView() //змінити назву змінної в іншомув коді
+    
+    // Стан для програмного керування активною вкладкою
+    @State private var selectedTab = 0
+    
     var body: some View {
-        HStack(spacing: 0) {
-            // Sidebar TabBar
-            VStack(spacing: 20) {
-                Button(action: { selectedTab = .weather }) {
-                    Image(systemName: "cloud.sun")
-                        .font(.system(size: 24))
-                }
-                .padding()
-
-                Button(action: { selectedTab = .favorites }) {
-                    Image(systemName: "star")
-                        .font(.system(size: 24))
-                }
-                .padding()
-
-                Spacer()
-            }
-            .frame(width: 70)
-            .background(Color(white: 0.92))
-
-            // Main Content
-            ZStack {
-                Color(white: 0.97).ignoresSafeArea()
-
-                if selectedTab == .weather {
-                    WeatherMainView(viewModel: weatherVM, favoritesVM: favoritesVM)
-                } else {
-                    FavoritesListView(favoritesVM: favoritesVM) { city in
-                        weatherVM.fetchWeather(cityName: city, lat: nil, lon: nil)
-                        selectedTab = .weather
+        ZStack {
+            // Простий нейтральний фон
+            Color(.systemBackground)
+                .ignoresSafeArea()
+            
+            // TabView для навігації
+            TabView(selection: $selectedTab) {
+                
+                // Вкладка "Погода"
+                WeatherDetailView(viewModel: weatherVM, favoritesVM: favoritesVM)
+                    .tabItem {
+                        Label("Погода", systemImage: "cloud.sun.fill")
                     }
+                    .tag(0)
+                
+                // Вкладка "Улюблені"
+                FavoritesView(
+                    favoritesVM: favoritesVM,
+                    weatherVM: weatherVM,
+                    onCitySelect: { selectedCity in
+                        weatherVM.fetchWeather(city: selectedCity, lat: nil, lon: nil)
+                        selectedTab = 0
+                    }
+                )
+                .tabItem {
+                    Label("Улюблені", systemImage: "list.star")
                 }
+                .tag(1)
             }
-        }
-        .onAppear {
-            if weatherVM.currentWeather == nil {
-                weatherVM.requestLocationIfNeeded()
-            }
+            .tint(.orange)
         }
     }
-}
-
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View { ContentView() }
 }
