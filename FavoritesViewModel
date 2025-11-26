@@ -1,0 +1,54 @@
+import Foundation
+import Combine
+
+/// Керує списком улюблених міст та їх збереженням
+class FavoritesVM: ObservableObject {
+    
+    /// Масив улюблених міст
+    @Published var cities: [String] = [] {
+        didSet {
+            // Кнопка редагування активна лише якщо є міста
+            isEditButtonVisible = !cities.isEmpty
+            persistFavorites()
+        }
+    }
+    
+    // Обирає чи показувати користувачу кнопку РЕДАГУВАТИ у улюблених містах 
+    @Published private(set) var isEditButtonVisible: Bool = false
+    
+    //Ключ який зберігає улюблені міста навіть після вимкнення програми 
+    private let storageKey = "MyFavoriteCities"
+    
+    // MARK: - Ініціалізація
+    init() {
+        loadFavorites()
+    }
+    
+    // MARK: - Публічні методи
+    
+    // Додає нове місто
+    func add(_ city: String) {
+        let cleanCity = city.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanCity.isEmpty, !cities.contains(cleanCity) else { return }
+        cities.append(cleanCity) // тригерить didSet
+    }
+    
+    //Видаляє місто за індексом з ліст
+    func remove(at offsets: IndexSet) {
+        cities.remove(atOffsets: offsets)
+    }
+    
+    // MARK: - Приватні методи
+    
+    //Завантажує список з UserDefaults
+    private func loadFavorites() {
+        if let saved = UserDefaults.standard.stringArray(forKey: storageKey) {
+            cities = saved
+        }
+    }
+    
+    // Зберігає список у UserDefaults
+    private func persistFavorites() {
+        UserDefaults.standard.set(cities, forKey: storageKey)
+    }
+}
