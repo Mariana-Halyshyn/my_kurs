@@ -1,0 +1,93 @@
+// Networking/WeatherService.swift
+
+import Foundation
+
+enum APIError: Error {
+    case invalidURL
+    case noData
+    case cityNotFound
+    case decodingError
+    case other(String)
+}
+
+class WeatherService {
+    
+    private let baseURL = "https://api.openweathermap.org/data/2.5/"
+    private let apiKey = "480936d07fc6be7125e719a8597b7135"  // <- Твій API ключ
+    private let units = "metric" // °C
+    
+    private func fetchData<T: Decodable>(
+        endpoint: String,
+        queryItems: [URLQueryItem],
+        completion: @escaping (Result<T, APIError>) -> Void
+    ) {
+        var components = URLComponents(string: baseURL + endpoint)
+        
+        var baseQueryItems = [
+            URLQueryItem(name: "appid", value: apiKey),
+            URLQueryItem(name: "units", value: units),
+            URLQueryItem(name: "lang", value: "uk")
+        ]
+        baseQueryItems.append(contentsOf: queryItems)
+        components?.queryItems = baseQueryItems
+        
+        guard let url = components?.url else {
+            completion(.failure(.invalidURL))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                completion(.failure(.other(error.localizedDescription)))
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                switch httpResponse.statusCode {
+                case 200: break
+                case 404: completion(.failure(.cityNotFound)); return
+                default: completion(.failure(.other("HTTP Error: \(httpResponse.statusCode)"))); return
+                }
+            }
+            
+            guard let data = data else {
+                completion(.failure(.noData))
+                return
+            }
+            
+            do {
+                let decoded = try JSONDecoder().decode(T.self, from: data)
+                completion(.success(decoded))
+            } catch {
+                completion(.failure(.decodingError))
+            }
+        }.resume()
+    }
+    
+    // MARK: - Запити за містом
+    func fetchCurrentWeather(city: String, completion: @escaping (Result<CurrentWeatherResponse, APIError>) -> Void) {
+        let query = [URLQueryItem(name: "q", value: city)]
+        fetchData(endpoint: "weather", queryItems: query, completion: completion)
+    }
+    
+    func fetchForecast(city: String, completion: @escaping (Result<ForecastResponse, APIError>) -> Void) {
+        let query = [URLQueryItem(name: "q", value: city)]
+        fetchData(endpoint: "forecast", queryItems: query, completion: completion)
+    }
+    
+    // MARK: - Запити за координатами
+    private func coordinateQuery(lat: Double, lon: Double) -> [URLQueryItem] {
+        return [
+            URLQueryItem(name: "lat", value: "\(lat)"),
+            URLQueryItem(name: "lon", value: "\(lon)")
+        ]
+    }
+    
+    func fetchCurrentWeather(lat: Double, lon: Double, completion: @escaping (Result<CurrentWeatherResponse, APIError>) -> Void) {
+        fetchData(endpoint: "weather", queryItems: coordinateQuery(lat: lat, lon: lon), completion: completion)
+    }
+    
+    func fetchForecast(lat: Double, lon: Double, completion: @escaping (Result<ForecastResponse, APIError>) -> Void) {
+        fetchData(endpoint: "forecast", queryItems: coordinateQuery(lat: lat, lon: lon), completion: completion)
+    }
+}
