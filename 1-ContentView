@@ -1,0 +1,129 @@
+ГРАДІЄНЬ - ВІДОБРАЖЕННЯ НА ВЕСЬ ЕКРАН
+
+
+
+import SwiftUI
+
+
+struct WeatherResponse: Decodable {
+    let main: WeatherMain
+    let weather: [WeatherInfo]
+}
+
+struct WeatherMain: Decodable {
+    let temp: Double
+}
+
+struct WeatherInfo: Decodable {
+    let description: String
+    let icon: String
+}
+
+struct ContentView: View {
+    
+    @State private var searchTown: String = ""
+    @State private var temperature: String = ""
+    @State private var description: String = ""
+    @State private var iconCode: String = ""
+    
+ 
+    private let apiKey = "480936d07fc6be7125e719a8597b7135"
+    
+// витяг фото з сайту
+    var iconURL: URL? {
+        URL(string: "https://openweathermap.org/img/wn/\(iconCode)@2x.png")
+    }
+    
+    var body: some View {
+       
+            
+            VStack(spacing: 16) {
+            
+            //фон градієнт ЗРОБИТИ ВІДОБРАЖЕННЯ НА ВЕСЬ ЕКРАН
+            LinearGradient(
+                gradient: Gradient(colors: [Color.blue.opacity(0.3), Color.white]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            
+            TextField("Введіть назву міста", text: $searchTown)
+                .padding()
+                .background(Color.white.opacity(0.2))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding()
+
+            
+            Button("Пошук") {
+                fetchWeather(for: searchTown)
+            }
+            .padding()
+            .background(Color.blue)
+            .foregroundStyle(.white)
+            .clipShape(Capsule())
+            
+            
+            Image(systemName: "star")
+                .imageScale(.large)
+                .foregroundColor(Color.yellow)
+                .foregroundStyle(.tint)
+                .padding()
+            // Відображення погоди
+            if !temperature.isEmpty {
+                
+                Text("Temperature: \(temperature)°C")
+                    .font(.title)
+                
+                Text(description.capitalized)
+                    .font(.headline)
+                    .padding(.bottom, 10)
+                
+                if let url = iconURL {
+                    AsyncImage(url: url) { image in
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 100, height: 100)
+                    } placeholder: {
+                        ProgressView()
+                    }
+                    
+                    
+                }
+                
+                
+            }
+            
+            Spacer()
+        }
+        .padding()
+        
+        
+    }
+    
+  
+    func fetchWeather(for city: String) {
+        let urlString =
+        "https://api.openweathermap.org/data/2.5/weather?q=\(city)&appid=\(apiKey)&units=metric"
+
+        guard let url = URL(string: urlString) else { return }
+        
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data else { return }
+            
+        
+            if let response = try? JSONDecoder().decode(WeatherResponse.self, from: data) {
+                DispatchQueue.main.async {
+                    self.temperature = String(format: "%.1f", response.main.temp)
+                    self.description = response.weather.first?.description ?? ""
+                    self.iconCode = response.weather.first?.icon ?? ""
+                }
+            }
+        }.resume()
+    }
+}
+
+#Preview {
+    ContentView()
+}
+
