@@ -1,0 +1,71 @@
+//
+//  WeatherViewModel.swift
+//  K_H
+//
+//  Created by ІПЗ-31/1 on 27.11.2025.
+//WeatherViewModel - Отримувати погоду за назвою міста
+
+//MVVM (ViewModel): Реалізувати WeatherViewModel із можливістю отримання погоди за назвою міста.
+
+
+import SwiftUI
+import Foundation
+internal import Combine
+
+struct WeatherResponse: Decodable {
+    let main: WeatherMain
+    let weather: [WeatherInfo]
+}
+
+struct WeatherMain: Decodable {
+    let temp: Double
+}
+
+struct WeatherInfo: Decodable {
+    let description: String
+    let icon: String
+}
+
+@MainActor
+class WeatherViewModel: ObservableObject {
+    //var objectWillChange: ObservableObjectPublisher
+    
+    
+    @Published var temperature: String = ""
+    @Published var description: String = ""
+    @Published var iconCode: String = ""
+    @Published var isLoading = false
+    @Published var errorMessage = ""
+    
+    private let apiKey = "480936d07fc6be7125e719a8597b7135"
+    
+    func fetchWeather(city: String) async {
+        guard !city.isEmpty else { return }
+        
+        isLoading = true
+        errorMessage = ""
+        
+        let urlString =
+        "https://api.openweathermap.org/data/2.5/weather?q=\(city)&appid=\(apiKey)&units=metric"
+        
+        guard let url = URL(string: urlString) else {
+            errorMessage = "Invalid URL"
+            isLoading = false
+            return
+        }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let result = try JSONDecoder().decode(WeatherResponse.self, from: data)
+            
+            temperature = String(format: "%.1f", result.main.temp)
+            description = result.weather.first?.description ?? ""
+            iconCode = result.weather.first?.icon ?? ""
+            
+        } catch {
+            errorMessage = "Failed to load weather"
+        }
+        
+        isLoading = false
+    }
+}
